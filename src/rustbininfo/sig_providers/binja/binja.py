@@ -62,7 +62,11 @@ class BinjaProvider(BaseSigProvider):
             #cxt = PluginCommandContext(bv)
             #PluginCommand.get_valid_list(cxt)['PDB\\Load (BETA)'].execute(cxt)
         elif binary_name.endswith('.o') or binary_name.endswith('.so'):
-            bv = binaryninja.BinaryViewType["ELF"].open(input_binary)
+            # Check if Windows, if so, use COFF
+            if os.name == 'nt':
+                bv = binaryninja.BinaryViewType["COFF"].open(input_binary)
+            else:
+                bv = binaryninja.BinaryViewType["ELF"].open(input_binary)
         else:
             raise ValueError('unsupported input file', input_binary)
         if not bv:
