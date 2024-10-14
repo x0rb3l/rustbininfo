@@ -121,7 +121,7 @@ class Crate(BaseModel):
 class CompilationCtx(BaseModel):
     profile: str = "release"
     template: Optional[Dict] = {
-        "lib": {"crate-type": ["dylib"]},
+        "lib": {"crate-type": ["cdylib"]},
         "profile": {
             "release": {"debug": 2, "panic": "abort"},  # Usefull for no-std crates
             "dev": {"debug": 2, "panic": "abort"},  # Usefull for no-std crates

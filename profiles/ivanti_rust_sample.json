@@ -1,5 +1,5 @@
 {
-    "lib": {"crate-type": ["dylib"]},
+    "lib": {"crate-type": ["cdylib"]},
     "profile": {
         "release": {
             "debug": 2,

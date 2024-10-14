@@ -197,6 +197,9 @@ class CompilationUnit:
             ],
             additional_env=self.ctx.env,
         )
+        
+        #print(code, out, err)
+        
         code, out, err = self._cargo_build(
             repo_path,
             crate,
@@ -208,6 +211,8 @@ class CompilationUnit:
             ],
             additional_env=self.ctx.env,
         )
+        #print(code, out, err)
+        
         code, out, err = self._cargo_build(
             repo_path,
             crate,
@@ -220,6 +225,8 @@ class CompilationUnit:
             additional_env=self.ctx.env,
         )
 
+        #print(code, out, err)
+
         return repo_path
 
     def _compile_lib(
@@ -230,7 +237,7 @@ class CompilationUnit:
             crate,
             features,
             [
-                # "--lib",
+                #"--lib",
                 "--profile",
                 "release" if self.ctx.profile == "release" else "dev",
             ],
@@ -260,21 +267,33 @@ class CompilationUnit:
 
         results = []
 
-        if os.name == "nt":
-            seeked_files = [
-                lambda file: Path(file).suffix[1:] == ".dll",
-                lambda file: Path(file).suffix[1:] == ".exe",
-            ]
+        # if os.name == "nt":
+        #     seeked_files = [
+        #         lambda file: Path(file).suffix[1:] == ".dll",
+        #         lambda file: Path(file).suffix[1:] == ".exe",
+        #     ]
+        
+        # # Check if the OS is toolchain name contains windows
+        # elif "windows" in self.tc.toolchain_name:
+        #     seeked_files = [
+        #         lambda file: Path(file).suffix[1:] == ".dll",
+        #         lambda file: Path(file).suffix[1:] == ".exe",
+        #     ]
 
-        else:
-            seeked_files = [
-                lambda file: Path(file).suffix[1:] == ".so",
-                lambda file: "." not in file,  # Highly inacurate but fine for now
+        # else:
+        #     seeked_files = [
+        #         lambda file: Path(file).suffix[1:] == ".so",
+        #         lambda file: "." not in file,  # Highly inacurate but fine for now
+        #     ]
+        
+        seeked_files = [
+            lambda file: Path(file).suffix == ".dll",
+            lambda file: Path(file).suffix == ".exe",
             ]
 
         for root, directories, filenames in os.walk(compile_dst):
             directories[:] = [
-                d for d in directories if d not in (".fingerprint", "build")
+                d for d in directories if d not in (".fingerprint", "build", "deps")
             ]
 
             for filename in filenames:
@@ -308,7 +327,7 @@ class CompilationUnit:
 
         lib_template = self.ctx.template.copy()
         if self.ctx.lib:
-            lib_template["lib"] = {"crate-type": ["dylib"]}
+            lib_template["lib"] = {"crate-type": ["cdylib"]}
         setup_toml(toml_path, lib_template)
         self._compile_lib(toml_path.parent, crate, features)
         results += self._get_result_files(toml_path.parent)

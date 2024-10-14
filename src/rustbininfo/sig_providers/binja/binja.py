@@ -19,18 +19,18 @@ class BinjaProvider(BaseSigProvider):
         self.cfg = cfg
 
     def generate_signature(self, libs: List[pathlib.Path], sig_name: Optional[str]) -> pathlib.Path:
-        pattern = self.generate_pattern(libs)
         sig_path = Path(sig_name if sig_name else "signature").with_suffix(".sig")
-        write_pattern(sig_path.with_suffix(".pkl"), pattern)
+        pattern = self.generate_pattern(sig_path, libs)
         write_sig(sig_path, pattern) 
         return sig_path
 
-    def generate_pattern(self, libs: List[Path]) -> Dict[FunctionNode, FunctionInfo]:
+    def generate_pattern(self, path: Path, libs: List[Path]) -> Dict[FunctionNode, FunctionInfo]:
         if not self.cfg.multiprocess:
             func_info = {}
             for lib in libs:
                 lib_pattern = self.process_binary(lib)
                 func_info.update(lib_pattern)
+                write_pattern(path.with_suffix(".pkl"), func_info)
             return func_info
                 
         workers = mp.cpu_count() // 4   # its all wrong here, wait for the --workers
@@ -63,10 +63,7 @@ class BinjaProvider(BaseSigProvider):
             #PluginCommand.get_valid_list(cxt)['PDB\\Load (BETA)'].execute(cxt)
         elif binary_name.endswith('.o') or binary_name.endswith('.so'):
             # Check if Windows, if so, use COFF
-            if os.name == 'nt':
-                bv = binaryninja.BinaryViewType["COFF"].open(input_binary)
-            else:
-                bv = binaryninja.BinaryViewType["ELF"].open(input_binary)
+            bv = binaryninja.BinaryViewType["COFF"].open(input_binary)
         else:
             raise ValueError('unsupported input file', input_binary)
         if not bv:
@@ -115,12 +112,31 @@ def init_child(wg_, results_, cpu_count_):
     global wg, results, cpu_count
     wg, results, cpu_count = wg_, results_, cpu_count_
 
+# def write_pattern(path: Path, lib_patterns: Dict[FunctionNode, FunctionInfo]):
+#     try:
+#         with open(path, "wb") as f:
+#             pickle.dump(lib_patterns, f)
+#     except Exception as e:
+#         print(f"oopsi, write_pattern failed: {e}")
+
 def write_pattern(path: Path, lib_patterns: Dict[FunctionNode, FunctionInfo]):
     try:
-        with open(path, "wb") as f:
-            pickle.dump(lib_patterns, f)
+        # Check if the file exists
+        if path.exists():
+            # Open the file in read-binary mode and load existing patterns
+            with open(path, "rb") as f:
+                existing_patterns = pickle.load(f)
+            # Merge existing patterns with new patterns
+            existing_patterns.update(lib_patterns)
+            # Open the file in write-binary mode and dump the updated patterns
+            with open(path, "wb") as f:
+                pickle.dump(existing_patterns, f)
+        else:
+            # If the file doesn't exist, write the new patterns directly
+            with open(path, "wb") as f:
+                pickle.dump(lib_patterns, f)
     except Exception as e:
-        print(f"oopsi, write_pattern failed: {e}")
+        print(f"Oops, write_pattern failed: {e}")
         
 def write_sig(signature_path: Path, pattern: Dict[FunctionNode, FunctionInfo]):
     trie = signaturelibrary.new_trie()

@@ -56,4 +56,7 @@ def sign_subcommand(
     print("Failed to compile :")
     for fail in failed:
         print(f"\t{fail}")
+    print(f"Got {len(libs)} libraries to sign")
+    # Pause execution
+    input("Press Enter to continue...")
     print(f"Generated : {provider.generate_signature(libs, signature_name)}")
